@@ -1,5 +1,6 @@
 package com.okancezik.spring_batch_redis.config;
 
+import com.okancezik.spring_batch_redis.entity.BillRun;
 import com.okancezik.spring_batch_redis.processors.BillRunProcessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.redis.builder.RedisItemReaderBuilder;
@@ -20,6 +22,7 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -27,52 +30,54 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 @RequiredArgsConstructor
 public class BatchConfig {
-	private final JobRepository              jobRepository;
-	private final PlatformTransactionManager transactionManager;
+	private final        JobRepository              jobRepository;
+	private final        PlatformTransactionManager transactionManager;
+	private final static String                     HASH_KEY = "billRuns::";
 
+	@Bean
 	public RedisConnectionFactory redisConnectionFactory() {
 		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration("127.0.0.1", 6379));
 		connectionFactory.start();
 		return connectionFactory;
 	}
 
-	public RedisTemplate<String, String> redisTemplate() {
-		RedisTemplate<String, String> template = new RedisTemplate<>();
-		template.setConnectionFactory(redisConnectionFactory());
+	@Bean
+	public RedisTemplate<String, BillRun> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+		RedisTemplate<String, BillRun> template = new RedisTemplate<>();
+		template.setConnectionFactory(redisConnectionFactory);
 		/*
 		 * KEY,VALUE SERIALIZER SETTINGS
 		 * */
 		template.setKeySerializer(new StringRedisSerializer());
-		template.setValueSerializer(new StringRedisSerializer());
+		//template.setValueSerializer(new StringRedisSerializer());
+		template.setValueSerializer(new Jackson2JsonRedisSerializer<>(BillRun.class));
 		template.afterPropertiesSet();
 		return template;
 	}
 
 	@Bean
-	public ItemWriter<String> writer() {
+	public ItemWriter<BillRun> writer(RedisTemplate<String, BillRun> redisTemplate) {
 		// itemKeyMapper ile her öğe için anahtar belirliyoruz
-		Converter<String, String> itemKeyMapper = item -> {
+		Converter<BillRun, String> itemKeyMapper = item -> {
 			log.info("Writer convert, item: {}", item);
 			// Verilen item, anahtar olarak kullanılacak
-			return item;
+			return HASH_KEY + item.getId();
 		};
-
-		return new RedisItemWriterBuilder<String, String>()
-				.redisTemplate(redisTemplate())
+		return new RedisItemWriterBuilder<String, BillRun>()
+				.redisTemplate(redisTemplate)
 				.itemKeyMapper(itemKeyMapper)
 				.delete(false)  // Veriyi silmiyoruz, güncelleme yapacağız
 				.build();
 	}
 
-
 	@Bean
-	public ItemReader<String> reader() {
+	public ItemReader<BillRun> reader(RedisTemplate<String, BillRun> redisTemplate) {
 		ScanOptions scanOptions = ScanOptions.scanOptions()
-				.match("billRun::*") // Belirli bir deseni eşleştir
+				.match("billRuns::*") // Belirli bir deseni eşleştir
 				.count(1)      // Her seferde 10 anahtar getir
 				.build();
-		return new RedisItemReaderBuilder<String, String>()
-				.redisTemplate(redisTemplate())
+		return new RedisItemReaderBuilder<String, BillRun>()
+				.redisTemplate(redisTemplate)
 				.scanOptions(scanOptions)
 				.build();
 	}
@@ -83,20 +88,22 @@ public class BatchConfig {
 	}
 
 	@Bean
-	public Step step() {
+	public Step step(ItemReader<BillRun> reader, ItemWriter<BillRun> writer, ItemProcessor<BillRun, BillRun> processor) {
 		return new StepBuilder("spring-batch-redis-step", jobRepository)
-				.<String, String> chunk(1, transactionManager)
-				.reader(reader())
-				.processor(processor())
-				.writer(writer())
+				.<BillRun, BillRun> chunk(1, transactionManager)
+				.reader(reader)
+				.processor(processor)
+				.writer(writer)
 				//.writer(items -> log.info(items.toString()))
 				.build();
 	}
 
 	@Bean
-	public Job job() {
+	public Job job(Step step) {
 		return new JobBuilder("redis", jobRepository)
-				.start(step())
+				.start(step)
 				.build();
 	}
 }
+
+

@@ -6,8 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Entity
 @NoArgsConstructor
@@ -16,6 +14,6 @@ public class BillRun {
 	@Id
 	private long id;
 	private String name;
-	private LocalDateTime billDate;
+	private String billDate;
 	private Long billingAccountId;
 }
