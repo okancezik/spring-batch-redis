@@ -1,4 +1,4 @@
-package com.okancezik.spring_batch_redis.processors;
+package com.okancezik.spring_batch_redis.core.processor;
 
 import com.okancezik.spring_batch_redis.entity.BillRun;
 import lombok.NonNull;
