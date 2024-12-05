@@ -1,4 +1,4 @@
-package com.okancezik.spring_batch_redis.core.reader;
+package com.okancezik.spring_batch_redis.core.batch.reader;
 
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.redis.builder.RedisItemReaderBuilder;

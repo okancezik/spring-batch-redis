@@ -1,4 +1,4 @@
-package com.okancezik.spring_batch_redis.core.writer;
+package com.okancezik.spring_batch_redis.core.batch.writer;
 
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.redis.builder.RedisItemWriterBuilder;
