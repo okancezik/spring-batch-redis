@@ -1,6 +1,6 @@
 package com.okancezik.spring_batch_redis.config;
 
-import com.okancezik.spring_batch_redis.core.redis.RedisBaseConfig;
+import com.okancezik.spring_batch_redis.core.redis.RedisCoreConfig;
 import com.okancezik.spring_batch_redis.entity.BillRun;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +20,7 @@ public class RedisConfig {
 
 	@Bean
 	public RedisTemplate<String, BillRun> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-		RedisBaseConfig<String, BillRun> baseConfig = new RedisBaseConfig<>();
+		RedisCoreConfig<String, BillRun> baseConfig = new RedisCoreConfig<>();
 		return baseConfig.getRedisTemplate(redisConnectionFactory, BillRun.class);
 	}
 }

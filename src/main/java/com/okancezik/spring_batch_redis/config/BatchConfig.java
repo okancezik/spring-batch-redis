@@ -1,6 +1,5 @@
 package com.okancezik.spring_batch_redis.config;
 
-import com.okancezik.spring_batch_redis.core.Constants;
 import com.okancezik.spring_batch_redis.core.batch.reader.BillingItemReader;
 import com.okancezik.spring_batch_redis.core.batch.writer.BillingItemWriter;
 import com.okancezik.spring_batch_redis.entity.BillRun;
@@ -22,6 +21,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import static com.okancezik.spring_batch_redis.enums.Keys.HASH_KEY;
+
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
@@ -32,8 +33,8 @@ public class BatchConfig {
 	@Bean
 	public ItemReader<BillRun> reader(RedisTemplate<String, BillRun> redisTemplate) {
 		ScanOptions scanOptions = ScanOptions.scanOptions()
-				.match(Constants.HASH_KEY + "*") // Belirli bir deseni eşleştir
-				.count(1)      // Her seferde 10 anahtar getir
+				.match(HASH_KEY.getKey() + "*") // Belirli bir deseni eşleştir
+				.count(10)      // Her seferde 10 anahtar getir
 				.build();
 		return new BillingItemReader<String, BillRun>()
 				.reader(redisTemplate, scanOptions);
@@ -49,7 +50,7 @@ public class BatchConfig {
 		// itemKeyMapper ile her öğe için anahtar belirliyoruz
 		Converter<BillRun, String> itemKeyMapper = item -> {
 			log.info("Writer convert, item: {}", item);
-			return Constants.HASH_KEY + item.getId();
+			return HASH_KEY.getKey() + item.getId();
 		};
 		return new BillingItemWriter<String, BillRun>()
 				.writer(redisTemplate, itemKeyMapper);
